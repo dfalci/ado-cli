@@ -1,0 +1,26 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+
+# Credenciais / config local
+.env
+.env.*
+!.env.example
+
+# Node / npm (empacotamento do CLI)
+node_modules/
+npm-debug.log*
+*.tgz
+.npm/
+
+# Binários baixados/empacotados para distribuição
+/npm/**/bin/
+dist/
+
+# Editores / SO
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
