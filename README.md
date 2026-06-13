@@ -113,28 +113,28 @@ cargo fmt --all --check
 
 ## CI / Release
 
+O release é feito com [cargo-dist](https://axodotdev.github.io/cargo-dist)
+(`dist`), configurado em `dist-workspace.toml`.
+
 - **`.github/workflows/ci.yml`** — a cada push na `main` e em PRs: roda
   `fmt --check`, `clippy -D warnings`, `cargo test` e `cargo build --release`.
-- **`.github/workflows/release.yml`** — disparado por uma **tag de versão**
-  (`git tag vX.Y.Z`): compila os binários para Linux x64, macOS x64, macOS arm64 e
-  Windows x64, cria um **GitHub Release** com os binários e publica os pacotes
-  **npm** (`@dfalci/ado-cli` + subpacotes por plataforma).
+- **`.github/workflows/release.yml`** (gerado pelo cargo-dist) — disparado por uma
+  **tag de versão** (`vX.Y.Z`): compila os binários para macOS (arm64/x64), Linux
+  (arm64/x64) e Windows x64, cria o **GitHub Release** com os arquivos e gera o
+  instalador **npm** (`ado-cli-npm-package.tar.gz`).
+- **`.github/workflows/publish-npm.workflow-run.yml`** — roda após o `Release`
+  concluir: baixa o `*-npm-package.tar.gz` do Release e faz `npm publish`
+  (`@dfalci/ado-cli`). Requer o secret **`NPM_TOKEN`**.
 
-**A tag é a fonte da versão.** O CI injeta a versão da tag no `Cargo.toml` antes de
-compilar, de modo que o binário (`ado-cli --version`/`--help`), o GitHub Release e
-os pacotes npm saiam **todos com a mesma versão da tag**. Um passo do workflow
-ainda verifica que `ado-cli --version` bate com a tag e falha se divergir. Você não
-precisa editar o `Cargo.toml` manualmente para lançar.
+**A versão é a do `Cargo.toml`** — ela define a versão do binário
+(`ado-cli --version`/`--help`), da tag, do GitHub Release e do pacote npm, tudo
+batendo. O fluxo de lançamento:
 
-Lançar uma versão (tudo na nuvem, sem build local):
+1. Atualize `version` no `Cargo.toml` (ex.: `0.2.0`).
+2. Rode `publish.bat` (lê a versão do `Cargo.toml`, cria e empurra a tag `vX.Y.Z`).
 
-```bash
-git tag v0.2.0
-git push origin v0.2.0
-```
-
-O `npm publish` só roda se o secret **`NPM_TOKEN`** estiver configurado no
-repositório; sem ele, o GitHub Release é criado normalmente e o publish é pulado.
+A tag dispara o `release.yml`; ao concluir, o `publish-npm` publica no npm.
+Regenerar o CI após mudar `dist-workspace.toml`: `dist generate`.
 
 Estrutura de empacotamento npm (`npm/`):
 

@@ -8,16 +8,11 @@
 .env.*
 !.env.example
 
-# Node / npm (empacotamento do CLI)
+# Node / npm
 node_modules/
 npm-debug.log*
 *.tgz
 .npm/
-
-# Binários por plataforma (preenchidos pelo CI no release) — o launcher JS do
-# pacote principal (npm/ado-cli/bin/) NÃO é ignorado.
-/npm/platforms/*/bin/
-dist/
 
 # Editores / SO
 .idea/

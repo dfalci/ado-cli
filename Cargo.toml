@@ -4,17 +4,20 @@ version = "0.1.0"
 edition = "2021"
 description = "CLI para manipular work items de um board do Azure DevOps (saída JSON)"
 license = "MIT"
+readme = "README.md"
 repository = "https://github.com/dfalci/ado-cli"
 homepage = "https://github.com/dfalci/ado-cli"
+authors = ["Daniel Falci <danielfalci@gmail.com>"]
 keywords = ["azure-devops", "azure-boards", "work-items", "cli"]
 
 [[bin]]
 name = "ado-cli"
 path = "src/main.rs"
 
-[profile.release]
-strip = true
-lto = true
+# Perfil usado pelo cargo-dist nos builds de release.
+[profile.dist]
+inherits = "release"
+lto = "thin"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
