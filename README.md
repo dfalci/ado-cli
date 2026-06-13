@@ -9,6 +9,16 @@ sub-tasks, gerenciar tags e comentários.
 Toda operação imprime **JSON** no stdout. É a contraparte de linha de comando do
 servidor MCP `mcp-ado` (que segue existindo, independente).
 
+## Instalação
+
+Via npm (instala o binário nativo da sua plataforma automaticamente):
+
+```bash
+npm install -g @dfalci/ado-cli
+```
+
+Ou compile do código (veja **Build**).
+
 ## Build
 
 ```bash
@@ -98,6 +108,42 @@ ado-cli skill
 ```bash
 cargo test
 cargo clippy --all-targets -- -D warnings
+cargo fmt --all --check
+```
+
+## CI / Release
+
+- **`.github/workflows/ci.yml`** — a cada push na `main` e em PRs: roda
+  `fmt --check`, `clippy -D warnings`, `cargo test` e `cargo build --release`.
+- **`.github/workflows/release.yml`** — disparado por uma **tag de versão**
+  (`git tag vX.Y.Z`): compila os binários para Linux x64, macOS x64, macOS arm64 e
+  Windows x64, cria um **GitHub Release** com os binários e publica os pacotes
+  **npm** (`@dfalci/ado-cli` + subpacotes por plataforma).
+
+**A tag é a fonte da versão.** O CI injeta a versão da tag no `Cargo.toml` antes de
+compilar, de modo que o binário (`ado-cli --version`/`--help`), o GitHub Release e
+os pacotes npm saiam **todos com a mesma versão da tag**. Um passo do workflow
+ainda verifica que `ado-cli --version` bate com a tag e falha se divergir. Você não
+precisa editar o `Cargo.toml` manualmente para lançar.
+
+Lançar uma versão (tudo na nuvem, sem build local):
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+O `npm publish` só roda se o secret **`NPM_TOKEN`** estiver configurado no
+repositório; sem ele, o GitHub Release é criado normalmente e o publish é pulado.
+
+Estrutura de empacotamento npm (`npm/`):
+
+```
+npm/
+├── ado-cli/                 # pacote principal: launcher JS + optionalDependencies
+│   └── bin/ado-cli.js       # resolve e executa o binário nativo da plataforma
+└── platforms/               # um subpacote por plataforma (bin/ preenchido no CI)
+    ├── linux-x64/  darwin-x64/  darwin-arm64/  win32-x64/
 ```
 
 ## Licença

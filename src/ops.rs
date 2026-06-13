@@ -98,8 +98,9 @@ pub async fn query(
         Some(w) => client.query_work_items(Some(w), fields).await?,
         // Sem WIQL (busca exploratória default): por padrão, só itens ABERTOS.
         None => {
-            let mut q =
-                String::from("SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project");
+            let mut q = String::from(
+                "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = @project",
+            );
             q.push_str(&open_filter_clause(client, include_closed).await?);
             q.push_str(" ORDER BY [System.ChangedDate] DESC");
             client.query_work_items(Some(&q), fields).await?
@@ -226,7 +227,8 @@ async fn closed_states(client: &AzureClient) -> Result<Vec<String>> {
     let mut set = std::collections::BTreeSet::new();
     for t in client.list_work_item_types().await? {
         for st in t.states {
-            if matches!(st.category.as_deref(), Some("Completed" | "Removed")) && !st.name.is_empty()
+            if matches!(st.category.as_deref(), Some("Completed" | "Removed"))
+                && !st.name.is_empty()
             {
                 set.insert(st.name);
             }
@@ -246,7 +248,8 @@ pub async fn links(client: &AzureClient, id: i64) -> Result<Value> {
         .into_iter()
         .next()
         .ok_or_else(|| anyhow!("work item {id} não encontrado"))?;
-    let (root_children, root_parent, root_related, root_pred, root_succ) = classify_relations(&root);
+    let (root_children, root_parent, root_related, root_pred, root_succ) =
+        classify_relations(&root);
 
     // 2. Desce a hierarquia de filhos por nível (BFS), guardando relações.
     let mut nodes: HashMap<i64, WorkItem> = HashMap::new();
@@ -361,7 +364,9 @@ pub async fn taskboard(client: &AzureClient, fields: Option<&[String]>) -> Resul
     for col in &cols.columns {
         let col_items: Vec<&WorkItem> = positions
             .iter()
-            .filter(|p| column_of.get(&p.work_item_id).map(String::as_str) == Some(col.name.as_str()))
+            .filter(|p| {
+                column_of.get(&p.work_item_id).map(String::as_str) == Some(col.name.as_str())
+            })
             .filter_map(|p| item_by_id.get(&p.work_item_id))
             .collect();
         columns_out.push(json!({
@@ -425,19 +430,31 @@ pub async fn create(client: &AzureClient, f: CreateFields) -> Result<Value> {
         ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Common.Priority", p));
     }
     if let Some(sp) = f.story_points {
-        ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Scheduling.StoryPoints", sp));
+        ops.push(JsonPatchOp::add_field(
+            "Microsoft.VSTS.Scheduling.StoryPoints",
+            sp,
+        ));
     }
     if let Some(ac) = f.acceptance_criteria {
-        ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Common.AcceptanceCriteria", ac));
+        ops.push(JsonPatchOp::add_field(
+            "Microsoft.VSTS.Common.AcceptanceCriteria",
+            ac,
+        ));
     }
     if let Some(rs) = f.repro_steps {
         ops.push(JsonPatchOp::add_field("Microsoft.VSTS.TCM.ReproSteps", rs));
     }
     if let Some(oe) = f.original_estimate {
-        ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Scheduling.OriginalEstimate", oe));
+        ops.push(JsonPatchOp::add_field(
+            "Microsoft.VSTS.Scheduling.OriginalEstimate",
+            oe,
+        ));
     }
     if let Some(rw) = f.remaining_work {
-        ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Scheduling.RemainingWork", rw));
+        ops.push(JsonPatchOp::add_field(
+            "Microsoft.VSTS.Scheduling.RemainingWork",
+            rw,
+        ));
     }
     if let Some(parent_id) = f.parent_id {
         ops.push(JsonPatchOp::add_relation(
@@ -450,7 +467,11 @@ pub async fn create(client: &AzureClient, f: CreateFields) -> Result<Value> {
     Ok(json!(item))
 }
 
-pub async fn update(client: &AzureClient, id: i64, fields: HashMap<String, String>) -> Result<Value> {
+pub async fn update(
+    client: &AzureClient,
+    id: i64,
+    fields: HashMap<String, String>,
+) -> Result<Value> {
     let ops: Vec<JsonPatchOp> = fields
         .into_iter()
         .map(|(k, v)| JsonPatchOp::add_field(&k, v))
@@ -530,7 +551,9 @@ pub async fn set_taskboard_column(
                 .id
         }
     };
-    client.set_taskboard_column(&iteration_id, id, column).await?;
+    client
+        .set_taskboard_column(&iteration_id, id, column)
+        .await?;
     Ok(json!({
         "id": id,
         "iteration_id": iteration_id,
@@ -556,7 +579,10 @@ pub async fn create_child_tasks(
             ops.push(JsonPatchOp::add_field("System.AssignedTo", a));
         }
         if let Some(rw) = task.remaining_work {
-            ops.push(JsonPatchOp::add_field("Microsoft.VSTS.Scheduling.RemainingWork", rw));
+            ops.push(JsonPatchOp::add_field(
+                "Microsoft.VSTS.Scheduling.RemainingWork",
+                rw,
+            ));
         }
         ops.push(JsonPatchOp::add_relation(
             LinkType::Parent.rel(),
@@ -616,7 +642,11 @@ fn classify_relations(item: &WorkItem) -> ClassifiedRelations {
         let Some(name) = rel.get("rel").and_then(|v| v.as_str()) else {
             continue;
         };
-        let Some(id) = rel.get("url").and_then(|v| v.as_str()).and_then(rel_target_id) else {
+        let Some(id) = rel
+            .get("url")
+            .and_then(|v| v.as_str())
+            .and_then(rel_target_id)
+        else {
             continue;
         };
         match name {

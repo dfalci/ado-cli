@@ -110,7 +110,10 @@ impl AzureClient {
             self.config.api_version
         );
         let result: WiqlResult = self
-            .send_json(self.request(Method::POST, url).json(&json!({ "query": query })))
+            .send_json(
+                self.request(Method::POST, url)
+                    .json(&json!({ "query": query })),
+            )
             .await?;
 
         let ids: Vec<i64> = result.work_items.iter().map(|w| w.id).take(200).collect();
@@ -367,7 +370,11 @@ impl AzureClient {
 
     /// Iteração atual (sprint corrente) do time, se houver.
     pub async fn current_iteration(&self) -> Result<Option<Iteration>> {
-        Ok(self.list_iterations(Some("current")).await?.into_iter().next())
+        Ok(self
+            .list_iterations(Some("current"))
+            .await?
+            .into_iter()
+            .next())
     }
 
     /// Ids dos work items associados a uma iteração.
@@ -379,7 +386,11 @@ impl AzureClient {
             self.config.api_version
         );
         let res: IterationWorkItems = self.send_json(self.request(Method::GET, url)).await?;
-        Ok(res.work_item_relations.iter().map(|r| r.target.id).collect())
+        Ok(res
+            .work_item_relations
+            .iter()
+            .map(|r| r.target.id)
+            .collect())
     }
 
     /// Define a iteração (sprint) de um work item via `System.IterationPath`.
@@ -554,16 +565,25 @@ fn project_identity(v: &Value) -> UserSummary {
     let display_name = v
         .get("providerDisplayName")
         .and_then(Value::as_str)
-        .or_else(|| v.pointer("/properties/DisplayName/$value").and_then(Value::as_str))
+        .or_else(|| {
+            v.pointer("/properties/DisplayName/$value")
+                .and_then(Value::as_str)
+        })
         .unwrap_or_default()
         .to_string();
     let unique_name = v
         .pointer("/properties/Mail/$value")
         .and_then(Value::as_str)
-        .or_else(|| v.pointer("/properties/Account/$value").and_then(Value::as_str))
+        .or_else(|| {
+            v.pointer("/properties/Account/$value")
+                .and_then(Value::as_str)
+        })
         .map(str::to_string)
         .filter(|s| !s.is_empty());
-    let descriptor = v.get("descriptor").and_then(Value::as_str).map(str::to_string);
+    let descriptor = v
+        .get("descriptor")
+        .and_then(Value::as_str)
+        .map(str::to_string);
     UserSummary {
         id,
         display_name,
@@ -679,7 +699,10 @@ mod tests {
             }
         });
         compact_identity_fields(&mut fields);
-        assert_eq!(fields["System.AssignedTo"], json!("Fulano de Tal <fulano@empresa.com>"));
+        assert_eq!(
+            fields["System.AssignedTo"],
+            json!("Fulano de Tal <fulano@empresa.com>")
+        );
         // Campos não-identidade permanecem intactos.
         assert_eq!(fields["System.Title"], json!("Tarefa"));
     }

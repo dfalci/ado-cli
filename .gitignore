@@ -14,8 +14,9 @@ npm-debug.log*
 *.tgz
 .npm/
 
-# Binários baixados/empacotados para distribuição
-/npm/**/bin/
+# Binários por plataforma (preenchidos pelo CI no release) — o launcher JS do
+# pacote principal (npm/ado-cli/bin/) NÃO é ignorado.
+/npm/platforms/*/bin/
 dist/
 
 # Editores / SO

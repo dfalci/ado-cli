@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: build / test / lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala toolchain Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache de build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Formatação (rustfmt)
+        run: cargo fmt --all --check
+
+      - name: Lint (clippy)
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Testes
+        run: cargo test --all
+
+      - name: Build release
+        run: cargo build --release

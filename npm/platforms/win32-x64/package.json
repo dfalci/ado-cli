@@ -1,0 +1,19 @@
+{
+  "name": "@dfalci/ado-cli-win32-x64",
+  "version": "0.1.0",
+  "description": "Binário nativo do ado-cli para Windows x64",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "files": [
+    "bin/"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dfalci/ado-cli.git"
+  }
+}

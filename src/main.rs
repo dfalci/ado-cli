@@ -189,8 +189,13 @@ async fn run(client: &AzureClient, command: Command) -> Result<Value> {
             include_closed,
             fields,
         } => {
-            ops::my_work_items(client, only_current_sprint, include_closed, opt_fields(&fields))
-                .await?
+            ops::my_work_items(
+                client,
+                only_current_sprint,
+                include_closed,
+                opt_fields(&fields),
+            )
+            .await?
         }
 
         Command::TaskboardColumns => ops::taskboard_columns(client).await?,
@@ -207,8 +212,8 @@ async fn run(client: &AzureClient, command: Command) -> Result<Value> {
                 Some(j) => j,
                 None => read_stdin()?,
             };
-            let tasks: Vec<ChildTask> =
-                serde_json::from_str(&src).context("JSON de sub-tasks inválido (esperado array)")?;
+            let tasks: Vec<ChildTask> = serde_json::from_str(&src)
+                .context("JSON de sub-tasks inválido (esperado array)")?;
             ops::create_child_tasks(client, parent_id, tasks).await?
         }
 

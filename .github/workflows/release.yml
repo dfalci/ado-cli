@@ -1,0 +1,159 @@
+name: release
+
+# Dispara ao empurrar uma tag de versão (ex.: v0.2.0). A versão da TAG é a fonte
+# da verdade: o CI a injeta no Cargo.toml antes de compilar, de modo que o
+# binário (`ado-cli --version`/`--help`), o GitHub Release e os pacotes npm saiam
+# todos com a MESMA versão da tag.
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build ${{ matrix.plat }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            plat: linux-x64
+            bin: ado-cli
+          - os: macos-13
+            target: x86_64-apple-darwin
+            plat: darwin-x64
+            bin: ado-cli
+          - os: macos-14
+            target: aarch64-apple-darwin
+            plat: darwin-arm64
+            bin: ado-cli
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            plat: win32-x64
+            bin: ado-cli.exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versão a partir da tag (injeta no Cargo.toml)
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([-+].+)?$'; then
+            echo "Tag '$GITHUB_REF_NAME' não é semver (esperado vX.Y.Z)." >&2
+            exit 1
+          fi
+          # Há exatamente uma linha começando com 'version = ' (a do [package]);
+          # as deps usam 'crate = { version = ... }', que não começam a linha.
+          sed -i.bak 's|^version = .*|version = "'"$VERSION"'"|' Cargo.toml
+          rm -f Cargo.toml.bak
+          echo "Cargo.toml -> $(grep -m1 '^version = ' Cargo.toml)"
+
+      - name: Instala toolchain Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache de build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepara binário
+        shell: bash
+        run: |
+          mkdir -p staging
+          cp "target/${{ matrix.target }}/release/${{ matrix.bin }}" "staging/${{ matrix.bin }}"
+
+      - name: Publica artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.plat }}
+          path: staging/${{ matrix.bin }}
+          if-no-files-found: error
+
+  publish:
+    name: release + npm publish
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Baixa artefatos
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Monta pacotes npm e assets do release
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          mkdir -p release
+          for plat in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
+            if [ "$plat" = "win32-x64" ]; then bin="ado-cli.exe"; else bin="ado-cli"; fi
+            src="artifacts/bin-$plat/$bin"
+            # Subpacote npm da plataforma (binário + versão = tag).
+            mkdir -p "npm/platforms/$plat/bin"
+            cp "$src" "npm/platforms/$plat/bin/$bin"
+            chmod +x "npm/platforms/$plat/bin/$bin" || true
+            node -e "const f='npm/platforms/$plat/package.json';const p=require('./'+f);p.version=process.env.V;require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n');" V="$VERSION"
+            # Asset do GitHub Release (nome descritivo).
+            if [ "$plat" = "win32-x64" ]; then cp "$src" "release/ado-cli-$plat.exe"; else cp "$src" "release/ado-cli-$plat"; fi
+          done
+          # Pacote principal: versão = tag e optionalDependencies = tag.
+          node -e "const f='npm/ado-cli/package.json';const p=require('./'+f);p.version=process.env.V;for(const k of Object.keys(p.optionalDependencies||{})){p.optionalDependencies[k]=process.env.V;}require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n');" V="$VERSION"
+
+      - name: Confere que o binário bate com a tag/Cargo
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x artifacts/bin-linux-x64/ado-cli
+          OUT="$(artifacts/bin-linux-x64/ado-cli --version)"
+          echo "ado-cli --version => $OUT"
+          if ! printf '%s' "$OUT" | grep -qE " ${VERSION}$"; then
+            echo "Versão do binário ($OUT) não bate com a tag ($VERSION)." >&2
+            exit 1
+          fi
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true
+
+      - name: npm publish (se houver NPM_TOKEN)
+        if: ${{ env.NPM_TOKEN != '' }}
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for plat in linux-x64 darwin-x64 darwin-arm64 win32-x64; do
+            (cd "npm/platforms/$plat" && npm publish --access public)
+          done
+          (cd npm/ado-cli && npm publish --access public)
+
+      - name: Aviso quando sem NPM_TOKEN
+        if: ${{ env.NPM_TOKEN == '' }}
+        run: echo "NPM_TOKEN ausente — pulei o npm publish. O GitHub Release foi criado normalmente."

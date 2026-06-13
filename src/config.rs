@@ -39,12 +39,7 @@ impl Config {
     /// variáveis de ambiente do SO como fallback por chave.
     pub fn load() -> Result<Self> {
         let file_vars = load_env_file(Path::new(ENV_FILE))?;
-        Self::from_lookup(|k| {
-            file_vars
-                .get(k)
-                .cloned()
-                .or_else(|| std::env::var(k).ok())
-        })
+        Self::from_lookup(|k| file_vars.get(k).cloned().or_else(|| std::env::var(k).ok()))
     }
 
     /// Implementação testável: recebe uma função de lookup que resolve cada chave
@@ -66,7 +61,8 @@ impl Config {
 
         let team = get("AZDO_TEAM").unwrap_or_else(|| format!("{project} Team"));
         let base_url = get("AZDO_BASE_URL").unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
-        let api_version = get("AZDO_API_VERSION").unwrap_or_else(|| DEFAULT_API_VERSION.to_string());
+        let api_version =
+            get("AZDO_API_VERSION").unwrap_or_else(|| DEFAULT_API_VERSION.to_string());
 
         Ok(Config {
             pat,
