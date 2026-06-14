@@ -14,7 +14,7 @@ servidor MCP `mcp-ado` (que segue existindo, independente).
 Via npm (instala o binário nativo da sua plataforma automaticamente):
 
 ```bash
-npm install -g @dfalci/ado-cli
+npm install -g @danielfalci/ado-cli
 ```
 
 Ou compile do código (veja **Build**).
@@ -124,7 +124,7 @@ O release é feito com [cargo-dist](https://axodotdev.github.io/cargo-dist)
   instalador **npm** (`ado-cli-npm-package.tar.gz`).
 - **`.github/workflows/publish-npm.workflow-run.yml`** — roda após o `Release`
   concluir: baixa o `*-npm-package.tar.gz` do Release e faz `npm publish`
-  (`@dfalci/ado-cli`). Requer o secret **`NPM_TOKEN`**.
+  (`@danielfalci/ado-cli`). Requer o secret **`NPM_TOKEN`**.
 
 **A versão é a do `Cargo.toml`** — ela define a versão do binário
 (`ado-cli --version`/`--help`), da tag, do GitHub Release e do pacote npm, tudo
