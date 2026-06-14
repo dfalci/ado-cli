@@ -1,8 +1,8 @@
-//! Definição da interface de linha de comando (clap derive).
+//! Command-line interface definition (clap derive).
 //!
-//! Importante: NÃO há flags de configuração (PAT, projeto, etc.) — toda a
-//! configuração vem do arquivo `.env` (ver `config.rs`). Os argumentos aqui são
-//! apenas os parâmetros das operações.
+//! Important: there are NO configuration flags (PAT, project, etc.) — all
+//! configuration comes from the `.env` file (see `config.rs`). The arguments here
+//! are only the operation parameters.
 
 use clap::{Parser, Subcommand};
 
@@ -12,11 +12,11 @@ use crate::ops::LinkType;
 #[command(
     name = "ado-cli",
     version,
-    about = "CLI para work items de um board do Azure DevOps (saída JSON)",
-    long_about = "Manipula work items de um board do Azure DevOps. Toda a configuração \
-(AZDO_PAT, AZDO_PROJECT, AZDO_TEAM, AZDO_BASE_URL, AZDO_API_VERSION) vem do arquivo \
-.env no diretório atual, com fallback para variáveis de ambiente do SO. A saída é \
-sempre JSON no stdout."
+    about = "CLI for work items on an Azure DevOps board (JSON output)",
+    long_about = "Manages work items on an Azure DevOps board. All configuration \
+(AZDO_PAT, AZDO_PROJECT, AZDO_TEAM, AZDO_BASE_URL, AZDO_API_VERSION) comes from the \
+.env file in the current directory, with a fallback to OS environment variables. \
+Output is always JSON on stdout."
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -24,48 +24,48 @@ pub struct Cli {
 }
 
 #[derive(Subcommand, Debug)]
-// A variante `Create` tem muitos campos opcionais; boxear quebraria o derive do
-// clap sem ganho real (a enum é construída uma vez, no parse).
+// The `Create` variant has many optional fields; boxing would break clap's derive
+// with no real gain (the enum is built once, at parse time).
 #[allow(clippy::large_enum_variant)]
 pub enum Command {
-    /// Consulta work items via WIQL (sem --wiql, lista os mais recentes ABERTOS).
+    /// Query work items via WIQL (without --wiql, lists the most recent OPEN ones).
     Query {
-        /// Texto WIQL completo. Quando informado, é respeitado como está.
+        /// Full WIQL text. When provided, it is respected as-is.
         #[arg(long)]
         wiql: Option<String>,
-        /// Sem --wiql, inclui também os fechados. Por padrão, só abertos.
-        /// (Ignorado quando --wiql é informado.)
+        /// Without --wiql, also include closed ones. By default, only open.
+        /// (Ignored when --wiql is provided.)
         #[arg(long)]
         include_closed: bool,
-        /// Campos a retornar (reference names), separados por vírgula.
+        /// Fields to return (reference names), comma-separated.
         #[arg(long, value_delimiter = ',')]
         fields: Vec<String>,
     },
-    /// Detalhes completos de um work item (inclui relations).
+    /// Full details of a work item (includes relations).
     Get {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
     },
-    /// Relações de um work item: árvore de filhos, pais e dependências.
+    /// Relations of a work item: child tree, parents, and dependencies.
     Links {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
     },
-    /// Cria um novo work item (Task, Bug, User Story, ...).
+    /// Create a new work item (Task, Bug, User Story, ...).
     Create {
-        /// Tipo do work item (ex.: Task, Bug, "User Story").
+        /// Work item type (e.g. Task, Bug, "User Story").
         #[arg(long = "type")]
         work_item_type: String,
-        /// Título (System.Title).
+        /// Title (System.Title).
         #[arg(long)]
         title: String,
-        /// Descrição (System.Description, aceita HTML).
+        /// Description (System.Description, accepts HTML).
         #[arg(long)]
         description: Option<String>,
-        /// Responsável (System.AssignedTo): email ou display name.
+        /// Assignee (System.AssignedTo): email or display name.
         #[arg(long)]
         assigned_to: Option<String>,
-        /// Estado inicial (System.State).
+        /// Initial state (System.State).
         #[arg(long)]
         state: Option<String>,
         /// Area path (System.AreaPath).
@@ -74,191 +74,191 @@ pub enum Command {
         /// Iteration path (System.IterationPath).
         #[arg(long)]
         iteration_path: Option<String>,
-        /// Tags (System.Tags), separadas por vírgula.
+        /// Tags (System.Tags), comma-separated.
         #[arg(long, value_delimiter = ',')]
         tags: Vec<String>,
-        /// Prioridade (Microsoft.VSTS.Common.Priority).
+        /// Priority (Microsoft.VSTS.Common.Priority).
         #[arg(long)]
         priority: Option<i64>,
         /// Story points (Microsoft.VSTS.Scheduling.StoryPoints).
         #[arg(long)]
         story_points: Option<f64>,
-        /// Critérios de aceite (Microsoft.VSTS.Common.AcceptanceCriteria).
+        /// Acceptance criteria (Microsoft.VSTS.Common.AcceptanceCriteria).
         #[arg(long)]
         acceptance_criteria: Option<String>,
-        /// Passos de reprodução, p/ bugs (Microsoft.VSTS.TCM.ReproSteps).
+        /// Repro steps, for bugs (Microsoft.VSTS.TCM.ReproSteps).
         #[arg(long)]
         repro_steps: Option<String>,
-        /// Estimativa original (Microsoft.VSTS.Scheduling.OriginalEstimate).
+        /// Original estimate (Microsoft.VSTS.Scheduling.OriginalEstimate).
         #[arg(long)]
         original_estimate: Option<f64>,
-        /// Trabalho restante (Microsoft.VSTS.Scheduling.RemainingWork).
+        /// Remaining work (Microsoft.VSTS.Scheduling.RemainingWork).
         #[arg(long)]
         remaining_work: Option<f64>,
-        /// Id do pai: linka o novo item como filho ao criar.
+        /// Parent id: links the new item as a child on creation.
         #[arg(long)]
         parent_id: Option<i64>,
     },
-    /// Atualiza campos arbitrários (reference names).
+    /// Update arbitrary fields (reference names).
     Update {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Campo a atualizar no formato reference_name=valor (repetível).
-        #[arg(long = "set", value_name = "REF=VALOR")]
+        /// Field to update in reference_name=value format (repeatable).
+        #[arg(long = "set", value_name = "REF=VALUE")]
         set: Vec<String>,
-        /// Objeto JSON com os campos a atualizar (ex.: '{"System.Title":"x"}').
-        /// Mesclado com os --set; sem --set, lido do stdin se omitido.
+        /// JSON object with the fields to update (e.g. '{"System.Title":"x"}').
+        /// Merged with --set; without --set, read from stdin if omitted.
         #[arg(long)]
         json: Option<String>,
     },
-    /// Altera o estado (System.State) de um work item.
+    /// Change the state (System.State) of a work item.
     SetState {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Novo estado (ex.: Active, Resolved, Closed).
+        /// New state (e.g. Active, Resolved, Closed).
         state: String,
     },
-    /// Atribui um work item a uma pessoa (System.AssignedTo); vazio remove.
+    /// Assign a work item to a person (System.AssignedTo); empty unassigns.
     Assign {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Responsável: email ou display name. String vazia remove.
+        /// Assignee: email or display name. Empty string unassigns.
         assigned_to: String,
     },
-    /// Move uma task para uma coluna do TASKBOARD da sprint.
+    /// Move a task to a sprint TASKBOARD column.
     SetTaskboardColumn {
-        /// Id do work item (normalmente uma Task).
+        /// Work item id (usually a Task).
         id: i64,
-        /// Nome EXATO da coluna destino (ver taskboard-columns).
+        /// EXACT name of the destination column (see taskboard-columns).
         #[arg(long)]
         column: String,
-        /// Id (uuid) da iteração; sem isso, usa a sprint atual.
+        /// Iteration id (uuid); without it, uses the current sprint.
         #[arg(long)]
         iteration_id: Option<String>,
     },
-    /// Vincula dois work items (pai/filho, related, predecessor/successor).
+    /// Link two work items (parent/child, related, predecessor/successor).
     AddLink {
-        /// Work item de origem.
+        /// Source work item.
         id: i64,
-        /// Work item alvo.
+        /// Target work item.
         target_id: i64,
-        /// Tipo de vínculo.
+        /// Link type.
         #[arg(long, value_enum)]
         link_type: LinkType,
-        /// Comentário opcional anexado ao link.
+        /// Optional comment attached to the link.
         #[arg(long)]
         comment: Option<String>,
     },
-    /// Reordena um item no backlog (StackRank por padrão; menor = mais acima).
+    /// Reorder an item in the backlog (StackRank by default; lower = higher up).
     SetBacklogPriority {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Valor de ordenação no backlog.
+        /// Ordering value in the backlog.
         priority: f64,
-        /// Campo de ordenação (default: Microsoft.VSTS.Common.StackRank).
+        /// Ordering field (default: Microsoft.VSTS.Common.StackRank).
         #[arg(long)]
         field: Option<String>,
     },
-    /// Lista os comentários de um work item.
+    /// List the comments of a work item.
     ListComments {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
     },
-    /// Adiciona um comentário a um work item.
+    /// Add a comment to a work item.
     AddComment {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Texto do comentário.
+        /// Comment text.
         text: String,
     },
-    /// Lista as iterações (sprints) do time.
+    /// List the team's iterations (sprints).
     ListIterations {
-        /// Filtro temporal: current, past ou future.
+        /// Time filter: current, past, or future.
         #[arg(long)]
         timeframe: Option<String>,
-        /// Inclui sprints já encerradas.
+        /// Include already-closed sprints.
         #[arg(long)]
         include_closed: bool,
     },
-    /// Sprint atual do time (por padrão só os IDs; --fields hidrata).
+    /// The team's current sprint (only IDs by default; --fields hydrates).
     CurrentSprint {
-        /// Campos a retornar (reference names), separados por vírgula.
+        /// Fields to return (reference names), comma-separated.
         #[arg(long, value_delimiter = ',')]
         fields: Vec<String>,
     },
-    /// Work items atribuídos ao dono do PAT (@Me). Por padrão, só os ABERTOS.
+    /// Work items assigned to the PAT owner (@Me). By default, only OPEN ones.
     MyWorkItems {
-        /// Limita à sprint atual do time.
+        /// Limit to the team's current sprint.
         #[arg(long)]
         only_current_sprint: bool,
-        /// Inclui também os itens fechados (estados terminais). Por padrão, só abertos.
+        /// Also include closed items (terminal states). By default, only open.
         #[arg(long)]
         include_closed: bool,
-        /// Campos a retornar (reference names), separados por vírgula.
+        /// Fields to return (reference names), comma-separated.
         #[arg(long, value_delimiter = ',')]
         fields: Vec<String>,
     },
-    /// Colunas customizadas do taskboard de sprint (config + mapeamentos).
+    /// Sprint taskboard custom columns (config + mappings).
     TaskboardColumns,
-    /// Visão do taskboard da sprint atual (itens agrupados por coluna).
+    /// Current sprint taskboard view (items grouped by column).
     Taskboard {
-        /// Campos a retornar (reference names), separados por vírgula.
+        /// Fields to return (reference names), comma-separated.
         #[arg(long, value_delimiter = ',')]
         fields: Vec<String>,
     },
-    /// Move um work item para uma iteração/sprint (define System.IterationPath).
+    /// Move a work item to an iteration/sprint (sets System.IterationPath).
     MoveToIteration {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Iteration path destino (ex.: "Loja\\Sprint 5").
+        /// Destination iteration path (e.g. "Store\\Sprint 5").
         #[arg(long)]
         iteration_path: String,
     },
-    /// Devolve um work item ao BACKLOG do time.
+    /// Return a work item to the team's BACKLOG.
     MoveToBacklog {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
     },
-    /// Move um work item para a sprint atual do time.
+    /// Move a work item to the team's current sprint.
     MoveToCurrentSprint {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
     },
-    /// Decompõe um pai criando várias sub-tasks já vinculadas a ele.
+    /// Decompose a parent by creating several sub-tasks already linked to it.
     CreateChildTasks {
-        /// Work item pai a decompor.
+        /// Parent work item to decompose.
         #[arg(long)]
         parent_id: i64,
-        /// Array JSON de sub-tasks (cada uma com title e campos opcionais).
-        /// Se omitido, lido do stdin.
+        /// JSON array of sub-tasks (each with title and optional fields).
+        /// If omitted, read from stdin.
         #[arg(long)]
         json: Option<String>,
     },
-    /// Adiciona tags a um work item (preserva as existentes).
+    /// Add tags to a work item (preserves existing ones).
     AddTags {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Tags a adicionar, separadas por vírgula.
+        /// Tags to add, comma-separated.
         #[arg(long, value_delimiter = ',', required = true)]
         tags: Vec<String>,
     },
-    /// Remove tags de um work item (mantém as demais).
+    /// Remove tags from a work item (keeps the others).
     RemoveTags {
-        /// Id do work item.
+        /// Work item id.
         id: i64,
-        /// Tags a remover, separadas por vírgula.
+        /// Tags to remove, comma-separated.
         #[arg(long, value_delimiter = ',', required = true)]
         tags: Vec<String>,
     },
-    /// Lista os tipos de work item válidos do projeto (e seus estados).
+    /// List the project's valid work item types (and their states).
     ListWorkItemTypes,
-    /// Lista os membros do time configurado.
+    /// List the members of the configured team.
     ListTeamMembers,
-    /// Pesquisa usuários da organização por nome ou e-mail (people picker).
+    /// Search the org's users by name or email (people picker).
     SearchUsers {
-        /// Texto para buscar: nome de exibição ou e-mail (ou parte deles).
+        /// Text to search: display name or email (or part of them).
         query: String,
     },
-    /// Instala a skill do Claude Code em ./.claude/skills/ (sobrescreve).
+    /// Install the Claude Code skill into ./.claude/skills/ (overwrites).
     Skill,
 }
