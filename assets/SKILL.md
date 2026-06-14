@@ -1,239 +1,300 @@
 ---
 name: azure-devops-tasks
 description: >-
-  Use SEMPRE que o usuário falar em interagir com o Azure DevOps / Azure Boards —
-  consultar, criar, atualizar, comentar, atribuir, mover de coluna/estado, fechar
-  work items, ou organizar backlog/sprint. Esta skill define COMO agir: a conduta
-  de segurança (leitura livre; escrita só sob ordem) E as boas práticas opinativas
-  de organização do board (anatomia de User Story, classificação de Bug, hierarquia
-  Feature>Story>Task, movimentação no taskboard da sprint). Gatilhos: "Azure DevOps",
-  "Azure Boards", "work item", "task da azure", "sprint", "board", "backlog", "PBI",
-  "user story", "bug", número de work item (#1234).
+  Use WHENEVER the user wants to interact with Azure DevOps / Azure Boards —
+  query, create, update, comment, assign, move column/state, close work items,
+  or organize the backlog/sprint. This skill defines HOW to act: the safety
+  conduct (read freely; write only on explicit order) AND the opinionated board
+  best practices (User Story anatomy, Bug classification, Feature>Story>Task
+  hierarchy, sprint taskboard movement). Triggers (PT/EN): "Azure DevOps",
+  "Azure Boards", "work item", "task da azure", "sprint", "board", "backlog",
+  "PBI", "user story", "bug", "minhas tasks", "minhas tarefas", a work-item
+  number (#1234).
 ---
 
-# Azure DevOps — conduta de segurança + boas práticas do board
+# Azure DevOps — safety conduct + board best practices
 
-Você opera um board **real, de produção**, através da CLI `ado-cli` (cada comando
-imprime **JSON** no stdout). Cada alteração é visível para todos e pode disparar
-automações, notificações e quebrar planejamento. Você tem duas missões, nesta ordem:
+You operate a **real, production** board through the `ado-cli` CLI (every command
+prints **JSON** to stdout). Every change is visible to everyone and may trigger
+automations, notifications, and break planning. You have two missions, in order:
 
-1. **Segurança** — *Leia à vontade. Só altere sob ordem direta e explícita do
-   usuário — nunca por iniciativa própria, nunca como "efeito colateral útil".*
-2. **Qualidade** — quando o usuário **mandar** criar/organizar, faça **bem feito**
-   e com opinião: estrutura correta, campos essenciais preenchidos, classificação
-   adequada. Esta skill diz qual é o "bem feito".
+1. **Safety** — *Read freely. Only change things on a direct, explicit user
+   order — never on your own initiative, never as a "useful side effect".*
+2. **Quality** — when the user **orders** you to create/organize, do it **well**
+   and with opinion: correct structure, essential fields filled, proper
+   classification. This skill defines what "well done" means.
 
-Os comandos de escrita executam o que o usuário mandar — eles não te autorizam a
-decidir o que "deveria" ser feito.
+Write commands execute what the user orders — they do NOT authorize you to decide
+what "should" be done.
 
-## 1. Níveis de risco das ações
+## 1. Action risk levels
 
-| Nível | Ações (subcomandos) | Quando agir |
+| Level | Actions (subcommands) | When to act |
 | --- | --- | --- |
-| 🟢 Leitura (livre) | `query`, `get`, `links`, `list-comments`, `list-work-item-types`, `list-iterations`, `current-sprint`, `my-work-items`, `taskboard`, `taskboard-columns`, `list-team-members`, `search-users` | Sempre que ajudar a responder/contextualizar. Não precisa pedir permissão. |
-| 🟡 Escrita comum | `create`, `create-child-tasks`, `update`, `assign`, `add-comment`, `set-backlog-priority`, `add-link`, `add-tags`, `remove-tags`, `move-to-iteration`, `move-to-current-sprint`, `move-to-backlog` | Só quando o usuário pedir. Confirme alvo e conteúdo; criação em lote exige confirmação da lista. |
-| 🔴 Escrita perigosa | `set-state` (muda o estado/fluxo do item), `set-taskboard-column` (move a task entre colunas do taskboard da sprint) | **Exige ordem direta e inequívoca**, identificando o item e o destino. Sem ordem explícita, NÃO faça. |
+| 🟢 Read (free) | `query`, `get`, `links`, `list-comments`, `list-work-item-types`, `list-iterations`, `current-sprint`, `my-work-items`, `taskboard`, `taskboard-columns`, `list-team-members`, `search-users` | Whenever it helps answer/contextualize. No permission needed. |
+| 🟡 Common write | `create`, `create-child-tasks`, `update`, `assign`, `add-comment`, `set-backlog-priority`, `add-link`, `add-tags`, `remove-tags`, `move-to-iteration`, `move-to-current-sprint`, `move-to-backlog` | Only when the user asks. Confirm target and content; bulk creation requires confirming the list. |
+| 🔴 Dangerous write | `set-state` (changes the item's state/flow), `set-taskboard-column` (moves the task between sprint taskboard columns) | **Requires a direct, unambiguous order** naming the item and the destination. Without an explicit order, DO NOT do it. |
 
-Nunca "promova" uma ação de um nível para outro. "Quais tasks estão abertas?" é
-leitura — não feche nada. "Atualize a descrição da #123" é escrita comum — não
-mude o estado junto.
+Never "promote" an action from one level to another. "Which tasks are open?" is a
+read — don't close anything. "Update the description of #123" is a common write —
+don't change the state along with it.
 
-## 2. O que NUNCA fazer sem ordem expressa
+## 2. What to NEVER do without an explicit order
 
-- **Mudar estado** (`set-state`) porque "parece concluído", o PR foi mergeado ou
-  os testes passaram. Estado só muda se o usuário disser para mudar **aquele** item.
-- **Mover de coluna/estado** (`set-taskboard-column`, ou estado via `set-state`)
-  por inferência.
-- **Reatribuir** (`assign`) sem o usuário nomear a pessoa.
-- **Alterações em massa** sem o usuário confirmar a lista item por item.
-- **Inventar** estados, tipos, paths ou nomes de pessoa. Descubra com
+- **Change state** (`set-state`) because it "looks done", the PR was merged, or
+  the tests passed. State only changes if the user tells you to change **that**
+  item.
+- **Move column/state** (`set-taskboard-column`, or state via `set-state`) by
+  inference.
+- **Reassign** (`assign`) without the user naming the person.
+- **Bulk changes** without the user confirming the list item by item.
+- **Invent** states, types, paths, or people's names. Discover them with
   `list-work-item-types`, `taskboard-columns`, `list-team-members`/`search-users`,
-  ou pergunte.
+  or ask.
 
-## 3. Modelo de trabalho do board (opinião — siga ao criar/organizar)
+## 3. Board working model (opinion — follow when creating/organizing)
 
-### 3.1 Hierarquia
-Estruture o trabalho como **Feature → User Story (ou Product Backlog Item) → Task**,
-com **Bug** ao lado da User Story (filho de Feature ou da própria Story afetada).
-Para montar a hierarquia, use `add-link --link-type parent` (ou `child`), ou crie
-já vinculado (`create --parent-id <pai>`, `create-child-tasks`).
+### 3.1 Hierarchy
+Structure work as **Feature → User Story (or Product Backlog Item) → Task**, with
+**Bug** alongside the User Story (child of a Feature or of the affected Story
+itself). To build the hierarchy, use `add-link --link-type parent` (or `child`),
+or create it already linked (`create --parent-id <parent>`, `create-child-tasks`).
 
-### 3.2 Anatomia de uma boa User Story
-Ao criar uma User Story/PBI, busque (peça ao usuário o que faltar; não invente):
-- **Título** orientado a valor — preferencialmente *"Como `<papel>`, quero
-  `<objetivo>` para `<benefício>`"*, ou ao menos uma frase de resultado de negócio
-  (não uma tarefa técnica).
-- **Descrição** (`--description`) com contexto/motivação.
-- **Critérios de aceite** (`--acceptance-criteria`) — o que define "pronto". Uma
-  Story sem critérios de aceite é incompleta: ofereça ajudar a redigi-los.
-- **Estimativa** (`--story-points`) quando o time usar.
-- Nasce **no backlog**, **sem responsável e sem sprint**, salvo ordem do usuário.
+### 3.2 Anatomy of a good User Story
+When creating a User Story/PBI, aim for (ask the user for what's missing; don't
+invent):
+- **Title** oriented to value — preferably *"As a `<role>`, I want `<goal>` so
+  that `<benefit>`"*, or at least a business-outcome sentence (not a technical
+  task).
+- **Description** (`--description`) with context/motivation.
+- **Acceptance criteria** (`--acceptance-criteria`) — what defines "done". A Story
+  without acceptance criteria is incomplete: offer to help draft them.
+- **Estimate** (`--story-points`) when the team uses it.
+- Born **in the backlog**, **with no assignee and no sprint**, unless the user
+  orders otherwise.
 
-### 3.3 Quando classificar como Bug (e como registrar)
-**Bug** = divergência entre o comportamento esperado e o real em algo que **já
-existe**. Trabalho novo/funcionalidade nova é User Story/PBI, não Bug.
-Ao registrar um Bug (`create --type Bug`), busque:
-- **Passos de reprodução** (`--repro-steps`) — sem repro, o bug é fraco: peça os passos.
-- **Prioridade** (`--priority`) e severidade quando o processo tiver o campo.
-- Vínculo ao item/área afetada (`add-link` related/parent) quando fizer sentido.
-Na dúvida entre Bug e Story, **pergunte** — a classificação muda relatórios e fluxo.
+### 3.3 When to classify as a Bug (and how to record it)
+**Bug** = divergence between expected and actual behavior in something that
+**already exists**. New work / new functionality is a User Story/PBI, not a Bug.
+When recording a Bug (`create --type Bug`), aim for:
+- **Repro steps** (`--repro-steps`) — without repro the bug is weak: ask for the
+  steps.
+- **Priority** (`--priority`) and severity when the process has the field.
+- A link to the affected item/area (`add-link` related/parent) when it makes sense.
+When in doubt between Bug and Story, **ask** — the classification changes reports
+and flow.
 
 ### 3.4 Tasks
-Tasks **decompõem** uma User Story (são filhas dela). Título acionável (verbo no
-início: "Implementar…", "Testar…"), com `--remaining-work` quando o time controlar
-horas. Para quebrar uma Story, use `create-child-tasks` (mostre a lista e peça OK
-antes de criar em lote).
+Tasks **decompose** a User Story (they are its children). Actionable title (verb
+first: "Implement…", "Test…"), with `--remaining-work` when the team tracks hours.
+To break down a Story, use `create-child-tasks` (show the list and ask for OK
+before bulk-creating).
 
-## 4. Movimentação na sprint (taskboard)
+## 4. Sprint movement (taskboard)
 
-As colunas do **taskboard de sprint** ("Customize columns on taskboard") **mapeiam
-estados** de work item. Veja o mapa com `taskboard-columns` (cada coluna tem
-`mappings: [{workItemType, state}]`) e a distribuição atual com `taskboard`.
+The **sprint taskboard** columns ("Customize columns on taskboard") **map to
+states** of a work item. See the map with `taskboard-columns` (each column has
+`mappings: [{workItemType, state}]`) and the current distribution with `taskboard`.
 
-- **Mover uma task entre colunas do taskboard:** use **`set-taskboard-column`**
-  (ação 🔴: só sob ordem) com o **nome EXATO** da coluna destino (de
-  `taskboard-columns`). Funciona **inclusive entre colunas que compartilham o
-  mesmo estado** (ex.: "Em Desenvolvimento", "Pendências", "Aguardando deploy",
-  "Teste" todas → `Active`): a coluna do taskboard não é um campo do work item, e
-  esse comando fala direto com o serviço de taskboard. Sem `--iteration-id`, usa a
-  sprint atual.
-- Mover de coluna **pode** ajustar o estado do item quando a coluna destino mapeia
-  um estado diferente do atual. Se você só quer mudar o estado/fluxo (sem se
-  importar com a coluna exata), use `set-state`.
-- Fluxo típico de uma Task: "Aguardando"(New) → "Em Desenvolvimento"(Active) → … →
-  "Finalizado"(Closed). **Confirme o nome exato** da coluna em `taskboard-columns`
-  antes de mover — não invente (nomes podem ter acento, ex.: "Pendências").
+- **Move a task between taskboard columns:** use **`set-taskboard-column`** (🔴
+  action: only on order) with the **EXACT name** of the destination column (from
+  `taskboard-columns`). It works **even between columns that share the same state**
+  (e.g. "Em Desenvolvimento", "Pendências", "Aguardando deploy", "Teste" all →
+  `Active`): the taskboard column is not a field on the work item, and this command
+  talks directly to the taskboard service. Without `--iteration-id`, it uses the
+  current sprint.
+- Moving a column **may** adjust the item's state when the destination column maps
+  to a different state than the current one. If you only want to change the
+  state/flow (not caring about the exact column), use `set-state`.
+- Typical Task flow: "Aguardando"(New) → "Em Desenvolvimento"(Active) → … →
+  "Finalizado"(Closed). **Confirm the exact column name** in `taskboard-columns`
+  before moving — don't invent it (names may have accents, e.g. "Pendências").
 
-## 5. Descoberta, contexto e ECONOMIA de tokens
+## 5. Discovery, context, and TOKEN ECONOMY
 
-Os comandos de leitura já devolvem respostas **enxutas** (campos default + identidades
-compactadas + projeções). Ainda assim, consulte de forma econômica:
+Read commands already return **lean** responses (default fields + compacted
+identities + projections). Still, query economically:
 
-- **`current-sprint`** devolve por padrão **apenas os IDs** da sprint (+ contagem).
-  Só passe `--fields` (reference names) quando precisar dos detalhes — aí ele
-  hidrata os itens com os campos pedidos.
-- **`my-work-items`** lista os itens atribuídos a você e, por padrão, traz **só os
-  abertos** (exclui os estados de categoria terminal — Completed/Removed —
-  descobertos via `list-work-item-types`). Use `--include-closed` para trazer
-  também os fechados, e `--only-current-sprint` para limitar à sprint corrente.
-- **`query` sem `--wiql`** (busca exploratória) também traz por padrão **só os
-  abertos**; use `--include-closed` para incluir os fechados. Com `--wiql`, sua
-  consulta é respeitada como está (sem filtro injetado).
-- **`query` / `my-work-items`** retornam até 200 itens; o tamanho cresce com o nº
-  de resultados. **Filtre na WIQL** (por tipo, estado, AssignedTo, IterationPath) e
-  passe `--fields` enxutos em vez de trazer tudo. Ex.:
+- **`get <id>`** returns the **complete** work item (all fields + `relations`). It
+  does **NOT** accept `--fields` — only `query`, `current-sprint`, `my-work-items`,
+  and `taskboard` do. Use `get` when you need full detail on one item; for a lean
+  multi-item listing, use `query` with `--fields`.
+- **`current-sprint`** returns by default **only the IDs** in the sprint (+ count).
+  Only pass `--fields` (reference names) when you need details — then it hydrates
+  the items with the requested fields.
+- **`my-work-items`** lists the items assigned to you and, by default, brings
+  **only the open ones** (excludes terminal-category states — Completed/Removed —
+  discovered via `list-work-item-types`). Use `--include-closed` to also bring the
+  closed ones, and `--only-current-sprint` to limit to the current sprint.
+- **`query` without `--wiql`** (exploratory search) also brings **only the open
+  ones** by default; use `--include-closed` to include closed. With `--wiql`, your
+  query is respected as-is (no injected filter).
+- **`query` / `my-work-items`** return up to 200 items; the size grows with the
+  number of results. **Filter in the WIQL** (by type, state, AssignedTo,
+  IterationPath) and pass lean `--fields` instead of fetching everything. E.g.:
   `ado-cli query --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType]='Bug' AND [System.State]='Active'"`.
-- **Hierarquia e dependências**: para ver as **tarefas filhas** de uma User Story
-  (ou a árvore Feature>Story>Task) e os vínculos related/predecessor/successor, use
-  **`links <id>`** — ele já traz a árvore de filhos (recursiva), a cadeia de pais e
-  as dependências, com campos enxutos, numa só chamada. Para só os filhos diretos,
-  `query` com WIQL `[System.Parent] = <id>` também serve.
-- **Filtrar por pessoa**: descubra o valor de `System.AssignedTo` com
-  `list-team-members` (membros do time) ou `search-users` (busca por nome/e-mail na
-  org). Depois filtre: `... AND [System.AssignedTo] = 'pessoa@empresa.com'` (ou `@Me`).
-- **Sprint/colunas**: `list-iterations` lista por padrão só as sprints **abertas**
-  (current/future); passe `--include-closed` para incluir as encerradas, ou
-  `--timeframe` (current/past/future) para um filtro específico. `taskboard` mostra
-  os itens nas colunas reais da sprint atual; `taskboard-columns` traz a config.
-- Estados e tipos variam por processo (Agile/Scrum/CMMI). Na dúvida, consulte
-  `list-work-item-types` antes de escrever — não chute (`Done` vs `Closed` vs `Resolved`).
-- Campos usam *reference names*. No `update`, informe-os com `--set ref=valor`
-  (repetível) ou `--json '{"ref": valor}'`. Principais: `System.Title`,
+- **Hierarchy and dependencies**: to see the **child tasks** of a User Story (or
+  the Feature>Story>Task tree) and related/predecessor/successor links, use
+  **`links <id>`** — it already brings the (recursive) child tree, the parent
+  chain, and the dependencies, with lean fields, in a single call. For just the
+  direct children, `query` with WIQL `[System.Parent] = <id>` also works.
+- **Filter by person**: discover the `System.AssignedTo` value with
+  `list-team-members` (team members) or `search-users` (search by name/email in the
+  org). Then filter: `... AND [System.AssignedTo] = 'person@company.com'` (or `@Me`).
+- **Sprint/columns**: `list-iterations` lists by default only the **open** sprints
+  (current/future); pass `--include-closed` to include the closed ones, or
+  `--timeframe` (current/past/future) for a specific filter. `taskboard` shows the
+  items in the real columns of the current sprint; `taskboard-columns` brings the
+  config.
+- States and types vary by process (Agile/Scrum/CMMI). When in doubt, consult
+  `list-work-item-types` before writing — don't guess (`Done` vs `Closed` vs
+  `Resolved`).
+- Fields use *reference names*. In `update`, pass them with `--set ref=value`
+  (repeatable) or `--json '{"ref": value}'`. Main ones: `System.Title`,
   `System.State`, `System.AssignedTo`, `System.Description`,
   `Microsoft.VSTS.Common.AcceptanceCriteria`, `Microsoft.VSTS.TCM.ReproSteps`,
-  `Microsoft.VSTS.Common.Priority`, `Microsoft.VSTS.Scheduling.StoryPoints`/`RemainingWork`.
+  `Microsoft.VSTS.Common.Priority`,
+  `Microsoft.VSTS.Scheduling.StoryPoints`/`RemainingWork`.
 
-## 6. Fluxo de trabalho (toda interação)
+## 5.1 Reading a work item: ALWAYS locate it in planning
 
-1. **Entenda o pedido.** Separe pergunta (leitura) de ordem de alteração (escrita).
-   Na dúvida sobre a intenção, trate como leitura e pergunte.
-2. **Identifique o alvo.** Antes de escrever, fixe o `id` exato. Se veio título em
-   vez de número, localize com `query` e **confirme** se houver mais de um candidato.
-3. **Ações 🔴 (estado/coluna):** declare numa frase o que vai mudar — *"vou mover a
-   #123 para 'Active'"* — e só execute se a ordem foi direta. Pedido vago
-   ("organiza aí") → liste o que faria e peça a ordem explícita.
-4. **Ao criar/organizar (🟡):** aplique a seção 3 (boa Story, Bug com repro,
-   hierarquia, tasks). Se faltar campo essencial (critérios de aceite, repro
-   steps), **ofereça preencher** — não invente conteúdo.
-5. **Execute exatamente o pedido.** Nada de comentários, reatribuições ou mudanças
-   de estado "de brinde".
-6. **Reporte** com o `id` e o resultado, de forma verificável.
+When you `get` (or otherwise report) a work item, don't stop at title/state.
+**Always tell the user where the item lives in planning: backlog vs. sprint, and —
+if in a sprint — which taskboard column.** This is what users expect ("what
+sprint, what column?"). Two pieces, two sources:
 
-## 7. Casos comuns
+1. **Backlog vs. sprint** — read `System.IterationPath` from `get`:
+   - If it equals the **project root** (a single segment, no backslash — e.g.
+     `bcloud`), the item is **in the backlog** (no sprint).
+   - If it has a **sub-path** (e.g. `bcloud\Sprint Agendamento`), the item is **in
+     that sprint** (the last segment is the sprint name).
 
-- **"Quais minhas tasks abertas?"** → leitura: `my-work-items` (por padrão já traz
-  **só os abertos** — exclui estados terminais). Para incluir os fechados, use
-  `my-work-items --include-closed`. Não altere nada.
-- **"Quais as tarefas da story #10?" / "Mostra as dependências da #10."** →
-  `links 10`: traz filhas (árvore), pais e related/predecessores/sucessores de uma vez.
-- **"Cria uma user story para X."** → `create --type "User Story"` no backlog, com
-  título de valor + `--description`; **ofereça** redigir critérios de aceite
-  (`--acceptance-criteria`) e estimar. Sem sprint/responsável salvo pedido.
-- **"Isso aqui está quebrado: …"** → provável **Bug**. Crie com `--repro-steps` e
-  `--priority`; confirme classificação se houver dúvida (Bug vs Story).
-- **"Quebra a story #10 em sub-tasks A, B, C."** → `create-child-tasks --parent-id 10`
-  passando o array JSON de tasks. Mostre a lista e peça OK antes.
-- **"Move a #123 para Em Desenvolvimento."** → ordem 🔴: confirme o nome exato da
-  coluna em `taskboard-columns` e use
-  `set-taskboard-column 123 --column "Em Desenvolvimento"` — funciona mesmo se a
-  coluna compartilhar estado com outras.
-- **"Fecha a #77."** → ordem direta: `set-state 77 <estado de fechamento>`. Se
-  ambíguo (`Closed`/`Done`), confirme.
-- **"Terminei o trabalho da story."** → ⚠️ **não é ordem de fechar** — é relato.
-  Pergunte se quer mudar estado/coluna antes de tocar no item.
-- **"Puxa a #88 para a sprint atual."** → `move-to-current-sprint 88` (mudança de
-  planejamento: só sob pedido).
-- **"Tira a #88 da sprint" / "joga a #88 pro backlog."** → `move-to-backlog 88`.
-- **"Cria uma demanda no backlog."** → `create` **omitindo** `--iteration-path`
-  (não chute o path da raiz). Veja a seção 8.
+2. **Which taskboard column** — `get` does **NOT** return the taskboard column.
+   You must cross-reference:
+   - ⚠️ **`System.BoardColumn` is NOT the taskboard column.** That field is the
+     **Kanban board** column (backlog board), which is a *different* board from the
+     sprint taskboard. They often disagree (an item can lack `BoardColumn` yet sit
+     in a real taskboard column). Never report `BoardColumn` as "the column".
+   - To get the real **sprint taskboard** column, run **`taskboard`** (current
+     sprint) and find the item by its `id` — the group it appears under is its
+     column. For a non-current sprint, use `taskboard-work-items <iteration-id>`
+     (resolve the iteration id via `list-iterations`).
+   - The column only exists for items **in a sprint**. Backlog items have no
+     taskboard column — say so.
+
+**Recipe for "tell me about #N":** `get N` → derive backlog/sprint from
+`IterationPath` → if in the **current** sprint, run `taskboard` and match `id` to
+report the column → summarize (type, state, assignee, parent, sprint, column,
+plus key fields like description/priority/acceptance/repro). A single extra
+`taskboard` call buys the column; spend it.
+
+## 6. Workflow (every interaction)
+
+1. **Understand the request.** Separate a question (read) from a change order
+   (write). When the intent is unclear, treat it as a read and ask.
+2. **Identify the target.** Before writing, lock the exact `id`. If you got a title
+   instead of a number, locate it with `query` and **confirm** if there's more than
+   one candidate.
+3. **🔴 actions (state/column):** state in one sentence what you'll change — *"I'll
+   move #123 to 'Active'"* — and only execute if the order was direct. A vague
+   request ("just organize it") → list what you would do and ask for the explicit
+   order.
+4. **When creating/organizing (🟡):** apply section 3 (good Story, Bug with repro,
+   hierarchy, tasks). If an essential field is missing (acceptance criteria, repro
+   steps), **offer to fill it** — don't invent content.
+5. **Execute exactly the request.** No "free" comments, reassignments, or state
+   changes.
+6. **Report** with the `id` and the result, verifiably. For reads of a single
+   item, include its planning location (sprint + column) per section 5.1.
+
+## 7. Common cases
+
+- **"What are my open tasks?" / "minhas tarefas"** → read: `my-work-items` (by
+  default it already brings **only the open ones** — excludes terminal states). To
+  include closed ones, use `my-work-items --include-closed`. Change nothing.
+- **"Tell me about #N" / "what about task #N?"** → `get N`, then locate it in
+  planning per **section 5.1** (backlog/sprint + taskboard column via `taskboard`).
+- **"What are the tasks of story #10?" / "Show the dependencies of #10."** →
+  `links 10`: brings children (tree), parents, and related/predecessors/successors
+  at once.
+- **"Create a user story for X."** → `create --type "User Story"` in the backlog,
+  with a value-oriented title + `--description`; **offer** to draft acceptance
+  criteria (`--acceptance-criteria`) and to estimate. No sprint/assignee unless
+  asked.
+- **"This is broken: …"** → likely a **Bug**. Create it with `--repro-steps` and
+  `--priority`; confirm the classification if there's doubt (Bug vs Story).
+- **"Break story #10 into sub-tasks A, B, C."** → `create-child-tasks --parent-id 10`
+  passing the JSON array of tasks. Show the list and ask for OK first.
+- **"Move #123 to Em Desenvolvimento."** → 🔴 order: confirm the exact column name
+  in `taskboard-columns` and use
+  `set-taskboard-column 123 --column "Em Desenvolvimento"` — it works even if the
+  column shares its state with others.
+- **"Close #77."** → direct order: `set-state 77 <closing state>`. If ambiguous
+  (`Closed`/`Done`), confirm.
+- **"I finished the story's work."** → ⚠️ **not an order to close** — it's a
+  report. Ask whether they want to change state/column before touching the item.
+- **"Pull #88 into the current sprint."** → `move-to-current-sprint 88` (a planning
+  change: only on request).
+- **"Take #88 out of the sprint" / "send #88 to the backlog."** →
+  `move-to-backlog 88`.
+- **"Create a demand in the backlog."** → `create` **omitting** `--iteration-path`
+  (don't guess the root path). See section 8.
 
 ## 8. Backlog × Sprint
 
-**Onde fica o backlog.** O backlog é a **raiz do projeto** — tecnicamente o
-`backlogIteration` configurado nas opções do time. Um item está "no backlog"
-quando seu `System.IterationPath` aponta para essa raiz; está "numa sprint" quando
-aponta para uma iteração filha.
+**Where the backlog is.** The backlog is the **project root** — technically the
+`backlogIteration` configured in the team settings. An item is "in the backlog"
+when its `System.IterationPath` points to that root; it's "in a sprint" when it
+points to a child iteration.
 
-**Criar no backlog — forma correta (importante).** Para abrir um item no backlog,
-use `create` e **simplesmente NÃO informe `--iteration-path`**. Sem esse campo, o
-Azure coloca o item no `defaultIteration` do time, que normalmente é o próprio
-backlog (a raiz).
-- ✅ **Faça**: criar **omitindo** `--iteration-path`.
-- ❌ **NÃO faça**: inventar/chutar um path "de backlog" (ex.: digitar o nome do
-  projeto na mão). Não chute paths — **omitir** é o caminho certo e robusto.
-- ⚠️ **Ressalva**: o destino de um item sem `--iteration-path` depende da config do
-  time. Se o `defaultIteration` apontar para uma sprint, o item novo cairá nessa
-  sprint. Quando precisar **garantir** o backlog, crie o item e em seguida chame
-  `move-to-backlog` nele.
+**Creating in the backlog — the correct way (important).** To open an item in the
+backlog, use `create` and **simply DON'T pass `--iteration-path`**. Without that
+field, Azure puts the item in the team's `defaultIteration`, which is normally the
+backlog (the root) itself.
+- ✅ **Do**: create **omitting** `--iteration-path`.
+- ❌ **DON'T**: invent/guess a "backlog path" (e.g. typing the project name by
+  hand). Don't guess paths — **omitting** is the correct, robust way.
+- ⚠️ **Caveat**: the destination of an item without `--iteration-path` depends on
+  the team config. If `defaultIteration` points to a sprint, the new item will land
+  in that sprint. When you need to **guarantee** the backlog, create the item and
+  then call `move-to-backlog` on it.
 
-**Devolver ao backlog / tirar da sprint.** Use **`move-to-backlog <id>`** — ele
-resolve o backlog do time automaticamente e ajusta o `IterationPath`. **Não** use
-`move-to-iteration` com um path adivinhado para isso.
+**Return to the backlog / take out of the sprint.** Use **`move-to-backlog <id>`** —
+it resolves the team's backlog automatically and adjusts the `IterationPath`. Do
+**not** use `move-to-iteration` with a guessed path for this.
 
-**Trazer para a sprint.** `move-to-current-sprint <id>` (sprint corrente) ou
-`move-to-iteration <id> --iteration-path <path>` com o `path` vindo de `list-iterations`.
+**Bring into the sprint.** `move-to-current-sprint <id>` (current sprint) or
+`move-to-iteration <id> --iteration-path <path>` with the `path` coming from
+`list-iterations`.
 
-**Priorizar no backlog.** `set-backlog-priority <id> <rank>` (menor rank = mais acima).
+**Prioritize in the backlog.** `set-backlog-priority <id> <rank>` (lower rank =
+higher up).
 
-Mover entre backlog e sprint é **planejamento**: só sob ordem, nunca por iniciativa.
+Moving between backlog and sprint is **planning**: only on order, never on your own
+initiative.
 
-## Pré-requisitos (configuração da CLI)
+## Prerequisites (CLI configuration)
 
-A CLI é o binário `ado-cli`. A configuração vem de um arquivo **`.env` na pasta da
-skill** (`.claude/skills/azure-devops-tasks/.env`, relativo ao diretório atual),
-com fallback para variáveis de ambiente do SO. **Não há flags de configuração na
-linha de comando** — só argumentos das operações.
+The CLI is the `ado-cli` binary. Configuration comes from a **`.env` file in the
+skill folder** (`.claude/skills/azure-devops-tasks/.env`, relative to the current
+directory), with a fallback to OS environment variables. **There are no
+configuration flags on the command line** — only operation arguments.
 
-**Como configurar:** rode **`ado-cli skill`** — num terminal interativo ele
-pergunta as credenciais e já grava o `.env` na pasta correta. Se o `.env` estiver
-faltando ou incompleto, os comandos falham com uma mensagem indicando o que
-preencher; nesse caso, oriente o usuário a rodar `ado-cli skill` (ou editar
-`.claude/skills/azure-devops-tasks/.env` à mão).
+**How to configure:** run **`ado-cli skill`** — in an interactive terminal it asks
+for the credentials and writes the `.env` to the correct folder. If the `.env` is
+missing or incomplete, commands fail with a message indicating what to fill in; in
+that case, guide the user to run `ado-cli skill` (or edit
+`.claude/skills/azure-devops-tasks/.env` by hand).
 
-Chaves:
-- `AZDO_PAT` — Personal Access Token. Escopo **Work Items (read/write)** cobre a
-  maior parte; **`search-users` requer também Identity (Read)** (ou Full access) —
-  sem isso ela retorna 401 (use `list-team-members`, que precisa só de leitura de projeto).
-- `AZDO_PROJECT` — formato `organizacao/projeto` (ex.: `contoso/Loja`).
-- Opcionais: `AZDO_TEAM` (time das APIs de sprint/taskboard; default `{projeto} Team`),
-  `AZDO_BASE_URL` (default `https://dev.azure.com`), `AZDO_API_VERSION` (default `7.1`).
+Keys:
+- `AZDO_PAT` — Personal Access Token. Scope **Work Items (read/write)** covers most
+  of it; **`search-users` also requires Identity (Read)** (or Full access) —
+  without it, it returns 401 (use `list-team-members`, which only needs project
+  read).
+- `AZDO_PROJECT` — format `organization/project` (e.g. `contoso/Store`). This name
+  must match an existing project **exactly** — a typo yields
+  `TF200016 ... project does not exist`. To list valid projects in the org, call
+  the Core API: `GET {base}/{org}/_apis/projects?api-version=7.1`.
+- Optional: `AZDO_TEAM` (the team for sprint/taskboard APIs; default
+  `{project} Team`), `AZDO_BASE_URL` (default `https://dev.azure.com`),
+  `AZDO_API_VERSION` (default `7.1`).

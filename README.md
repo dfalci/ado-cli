@@ -3,125 +3,164 @@
 [![npm](https://img.shields.io/npm/v/@danielfalci/ado-cli)](https://www.npmjs.com/package/@danielfalci/ado-cli)
 [![ci](https://github.com/dfalci/ado-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/dfalci/ado-cli/actions/workflows/ci.yml)
 
-CLI local (Rust) que dá acesso às **tasks (work items) de um board do Azure
-DevOps** pela linha de comando: listar/consultar, criar, atualizar, mudar de
-estado, atribuir, mover de coluna no taskboard, vincular itens (hierarquia do
-backlog), reordenar o backlog, navegar o contexto de sprint, decompor itens em
-sub-tasks, gerenciar tags e comentários.
+A local (Rust) CLI that exposes the **tasks (work items) of an Azure DevOps
+board** from the command line: list/query, create, update, change state, assign,
+move taskboard columns, link items (backlog hierarchy), reorder the backlog,
+navigate sprint context, decompose items into sub-tasks, and manage tags and
+comments.
 
-Toda operação imprime **JSON** no stdout. É a contraparte de linha de comando do
-servidor MCP `mcp-ado` (que segue existindo, independente).
+Every operation prints **JSON** to stdout. It is the command-line counterpart of
+the `mcp-ado` MCP server (which still exists, independently).
 
-## Instalação
+## Quick start
 
-Via npm (instala o binário nativo da sua plataforma automaticamente):
+End-to-end, from zero to driving your board with Claude:
+
+```bash
+# 1. Install the CLI globally (pulls the native binary for your platform)
+npm install -g @danielfalci/ado-cli
+
+# 2. Go into the project where you want to use it
+cd /path/to/your/project
+
+# 3. Install the skill + configure credentials (interactive)
+ado-cli skill
+#   → it writes .claude/skills/azure-devops-tasks/SKILL.md
+#   → then it prompts you, interactively:
+#       AZDO_PAT      : <paste your Personal Access Token>
+#       AZDO_PROJECT  : organization/project   (e.g. contoso/Store)
+#       AZDO_TEAM     : <Enter to accept the default "{project} Team">
+#   → and saves .claude/skills/azure-devops-tasks/.env for you
+
+# 4. Sanity-check the connection (read-only)
+ado-cli my-work-items
+
+# 5. Run Claude in that folder — the skill is now active
+claude
+```
+
+That's it. From inside Claude you can now say things like *"show my tasks"*,
+*"tell me about #2287"*, or *"create a user story for X"*, and the agent will use
+`ado-cli` following the safety rules baked into the skill (read freely; write only
+on an explicit order).
+
+> **Heads up on `AZDO_PROJECT`:** the value must match an existing project
+> **exactly** (e.g. `contoso/Store`). A typo produces
+> `TF200016 ... project does not exist`. To list the valid projects in your org:
+> `curl -u :$AZDO_PAT https://dev.azure.com/<org>/_apis/projects?api-version=7.1`.
+
+## Installation
+
+Via npm (installs the native binary for your platform automatically):
 
 ```bash
 npm install -g @danielfalci/ado-cli
 ```
 
-Plataformas suportadas: macOS (arm64/x64), Linux (arm64/x64) e Windows x64.
-Também há binários prontos em cada [GitHub Release](https://github.com/dfalci/ado-cli/releases).
-Ou compile do código (veja **Build**).
+Supported platforms: macOS (arm64/x64), Linux (arm64/x64) and Windows x64. There
+are also prebuilt binaries in each
+[GitHub Release](https://github.com/dfalci/ado-cli/releases). Or build from source
+(see **Build**).
 
 ## Build
 
 ```bash
 cargo build --release
-# binário em target/release/ado-cli
+# binary at target/release/ado-cli
 ```
 
-## Configuração
+## Configuration
 
-A configuração vem de um arquivo **`.env` na pasta da skill**
-(`.claude/skills/azure-devops-tasks/.env`, relativo ao diretório atual), no formato
-`CHAVE=valor`. Para cada chave ausente no arquivo, cai-se para a variável de
-ambiente do SO de mesmo nome. **Não há flags de configuração na CLI** — a linha
-de comando recebe apenas os argumentos das operações.
+Configuration comes from a **`.env` file in the skill folder**
+(`.claude/skills/azure-devops-tasks/.env`, relative to the current directory), in
+`KEY=value` format. For each key missing from the file, it falls back to the OS
+environment variable of the same name. **There are no configuration flags in the
+CLI** — the command line only takes operation arguments.
 
-A forma recomendada de configurar é rodar **`ado-cli skill`**: num terminal
-interativo ele pergunta as credenciais e grava o `.env` já na pasta correta
-(ver **Skill do Claude Code**).
+The recommended way to configure is to run **`ado-cli skill`**: in an interactive
+terminal it asks for the credentials and writes the `.env` to the correct folder
+(see **Claude Code skill**).
 
-| Variável            | Obrigatória | Default                  | Descrição                                       |
-| ------------------- | ----------- | ------------------------ | ----------------------------------------------- |
-| `AZDO_PAT`          | sim         | —                        | Personal Access Token (escopo Work Items r/w).  |
-| `AZDO_PROJECT`      | sim         | —                        | No formato `organizacao/projeto`.               |
-| `AZDO_TEAM`         | não         | `{projeto} Team`         | Time usado nas APIs de sprint/iteração.         |
-| `AZDO_BASE_URL`     | não         | `https://dev.azure.com`  | Útil para Azure DevOps Server on-prem.          |
-| `AZDO_API_VERSION`  | não         | `7.1`                    | Versão da API REST.                             |
+| Variable            | Required | Default                  | Description                                   |
+| ------------------- | -------- | ------------------------ | --------------------------------------------- |
+| `AZDO_PAT`          | yes      | —                        | Personal Access Token (Work Items r/w scope). |
+| `AZDO_PROJECT`      | yes      | —                        | In the `organization/project` format.         |
+| `AZDO_TEAM`         | no       | `{project} Team`         | Team used by the sprint/iteration APIs.       |
+| `AZDO_BASE_URL`     | no       | `https://dev.azure.com`  | Useful for on-prem Azure DevOps Server.        |
+| `AZDO_API_VERSION`  | no       | `7.1`                    | REST API version.                             |
 
-Exemplo de `.claude/skills/azure-devops-tasks/.env`:
+Example `.claude/skills/azure-devops-tasks/.env`:
 
 ```
-AZDO_PAT=<seu-pat>
-AZDO_PROJECT=contoso/Loja
+AZDO_PAT=<your-pat>
+AZDO_PROJECT=contoso/Store
 ```
 
-## Uso
+## Usage
 
 ```bash
-ado-cli <comando> [args]
-# saída sempre em JSON no stdout
+ado-cli <command> [args]
+# output is always JSON on stdout
 
-ado-cli --help          # lista todos os comandos
-ado-cli <comando> --help
+ado-cli --help          # list all commands
+ado-cli <command> --help
 ```
 
-### Exemplos
+### Examples
 
 ```bash
-# Leitura
-ado-cli query                               # sem WIQL: só os mais recentes ABERTOS
-ado-cli query --include-closed              # sem WIQL: inclui os fechados
+# Read
+ado-cli query                               # no WIQL: only the most recent OPEN ones
+ado-cli query --include-closed              # no WIQL: include closed ones
 ado-cli query --wiql "SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType]='Bug' AND [System.State]='Active'"
 ado-cli get 123
 ado-cli links 10
 ado-cli current-sprint --fields System.Id,System.Title,System.State
 ado-cli taskboard
-ado-cli my-work-items                       # por padrão, só os abertos
-ado-cli my-work-items --include-closed      # inclui os fechados
+ado-cli my-work-items                       # by default, only open ones
+ado-cli my-work-items --include-closed      # include closed ones
 ado-cli my-work-items --only-current-sprint
 
-# Escrita
-ado-cli create --type Bug --title "Erro no checkout" --repro-steps "1. ..." --priority 1
-ado-cli update 123 --set System.Title="Novo título" --set Microsoft.VSTS.Common.Priority=2
-ado-cli update 123 --json '{"System.Title":"Novo título","Microsoft.VSTS.Common.Priority":2}'
-ado-cli assign 123 "fulano@empresa.com"
+# Write
+ado-cli create --type Bug --title "Checkout error" --repro-steps "1. ..." --priority 1
+ado-cli update 123 --set System.Title="New title" --set Microsoft.VSTS.Common.Priority=2
+ado-cli update 123 --json '{"System.Title":"New title","Microsoft.VSTS.Common.Priority":2}'
+ado-cli assign 123 "someone@company.com"
 ado-cli add-link 10 42 --link-type child
-ado-cli add-comment 123 "Comentário"
+ado-cli add-comment 123 "A comment"
 
-# Escrita 🔴 (estado/coluna): só sob ordem explícita
+# Write 🔴 (state/column): only on an explicit order
 ado-cli set-state 77 Closed
 ado-cli set-taskboard-column 123 --column "Em Desenvolvimento"
 
-# Decompor um pai em sub-tasks (array JSON via --json ou stdin)
-ado-cli create-child-tasks --parent-id 10 --json '[{"title":"Implementar API"},{"title":"Testar"}]'
+# Decompose a parent into sub-tasks (JSON array via --json or stdin)
+ado-cli create-child-tasks --parent-id 10 --json '[{"title":"Implement API"},{"title":"Test"}]'
 echo '[{"title":"A"},{"title":"B"}]' | ado-cli create-child-tasks --parent-id 10
 ```
 
-Comandos com estrutura complexa (`update`, `create-child-tasks`) aceitam **JSON**
-via flag (`--json`) ou pelo **stdin** quando a flag é omitida.
+Commands with complex structure (`update`, `create-child-tasks`) accept **JSON**
+via flag (`--json`) or via **stdin** when the flag is omitted.
 
-## Skill do Claude Code
+## Claude Code skill
 
-O binário instala uma skill que ensina o agente a usar esta CLI e, no mesmo
-passo, configura as credenciais:
+The binary installs a skill that teaches the agent how to use this CLI and, in the
+same step, configures the credentials:
 
 ```bash
-cd /seu/projeto
+cd /your/project
 ado-cli skill
 ```
 
-O que `ado-cli skill` faz:
+What `ado-cli skill` does:
 
-- grava `./.claude/skills/azure-devops-tasks/SKILL.md` (sobrescreve se existir);
-- grava um `.env.example` de modelo na mesma pasta;
-- num **terminal interativo**, pergunta as credenciais (PAT, projeto e os opcionais)
-  e grava o **`.env` já na pasta correta** — pedindo confirmação antes de
-  sobrescrever um `.env` existente. Fora de um terminal, apenas indica onde criar o `.env`.
+- writes `./.claude/skills/azure-devops-tasks/SKILL.md` (overwrites if present);
+- writes a template `.env.example` in the same folder;
+- in an **interactive terminal**, prompts for the credentials (PAT, project, and
+  the optionals) and writes the **`.env` directly into the correct folder** —
+  asking for confirmation before overwriting an existing `.env`. Outside a
+  terminal, it just indicates where to create the `.env`.
 
-## Desenvolvimento
+## Development
 
 ```bash
 cargo test
@@ -131,31 +170,32 @@ cargo fmt --all --check
 
 ## CI / Release
 
-O release é feito com [cargo-dist](https://axodotdev.github.io/cargo-dist)
-(`dist`), configurado em `dist-workspace.toml`.
+The release is done with [cargo-dist](https://axodotdev.github.io/cargo-dist)
+(`dist`), configured in `dist-workspace.toml`.
 
-- **`.github/workflows/ci.yml`** — a cada push na `main` e em PRs: roda
-  `fmt --check`, `clippy -D warnings`, `cargo test` e `cargo build --release`.
-- **`.github/workflows/release.yml`** (gerado pelo cargo-dist) — disparado por uma
-  **tag de versão** (`vX.Y.Z`): compila os binários para macOS (arm64/x64), Linux
-  (arm64/x64) e Windows x64, cria o **GitHub Release** com os arquivos e gera o
-  instalador **npm** (`ado-cli-npm-package.tar.gz`).
-- **`.github/workflows/publish-npm.workflow-run.yml`** — roda após o `Release`
-  concluir: baixa o `*-npm-package.tar.gz` do Release e faz `npm publish`
-  (`@danielfalci/ado-cli`). Requer o secret **`NPM_TOKEN`**.
+- **`.github/workflows/ci.yml`** — on every push to `main` and on PRs: runs
+  `fmt --check`, `clippy -D warnings`, `cargo test`, and `cargo build --release`.
+- **`.github/workflows/release.yml`** (generated by cargo-dist) — triggered by a
+  **version tag** (`vX.Y.Z`): builds the binaries for macOS (arm64/x64), Linux
+  (arm64/x64) and Windows x64, creates the **GitHub Release** with the files, and
+  generates the **npm** installer (`ado-cli-npm-package.tar.gz`).
+- **`.github/workflows/publish-npm.workflow-run.yml`** — runs after `Release`
+  finishes: downloads the `*-npm-package.tar.gz` from the Release and runs
+  `npm publish` (`@danielfalci/ado-cli`). Requires the **`NPM_TOKEN`** secret.
 
-**A versão é a do `Cargo.toml`** — ela define a versão do binário
-(`ado-cli --version`/`--help`), da tag, do GitHub Release e do pacote npm, tudo
-batendo. O fluxo de lançamento:
+**The version is the one in `Cargo.toml`** — it defines the binary version
+(`ado-cli --version`/`--help`), the tag, the GitHub Release, and the npm package,
+all matching. The release flow:
 
-1. Atualize `version` no `Cargo.toml` (ex.: `0.2.0`).
-2. Rode `publish.bat` (lê a versão do `Cargo.toml`, cria e empurra a tag `vX.Y.Z`).
+1. Update `version` in `Cargo.toml` (e.g. `0.2.0`).
+2. Run `publish.bat` (reads the version from `Cargo.toml`, creates and pushes the
+   `vX.Y.Z` tag).
 
-A tag dispara o `release.yml`; ao concluir, o `publish-npm` publica no npm. O
-instalador npm (`ado-cli-npm-package.tar.gz`) é gerado pelo próprio cargo-dist —
-não há código de empacotamento npm versionado no repositório. Para regenerar o CI
-após mudar o `dist-workspace.toml`: `dist generate`.
+The tag triggers `release.yml`; once it finishes, `publish-npm` publishes to npm.
+The npm installer (`ado-cli-npm-package.tar.gz`) is generated by cargo-dist itself
+— there is no npm packaging code versioned in the repo. To regenerate the CI after
+changing `dist-workspace.toml`: `dist generate`.
 
-## Licença
+## License
 
 MIT.
