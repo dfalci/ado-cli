@@ -1,6 +1,6 @@
 [package]
 name = "ado-cli"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "CLI to manage work items on an Azure DevOps board (JSON output)"
 license = "MIT"
