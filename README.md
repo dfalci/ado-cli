@@ -1,5 +1,8 @@
 # ado-cli
 
+[![npm](https://img.shields.io/npm/v/@danielfalci/ado-cli)](https://www.npmjs.com/package/@danielfalci/ado-cli)
+[![ci](https://github.com/dfalci/ado-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/dfalci/ado-cli/actions/workflows/ci.yml)
+
 CLI local (Rust) que dá acesso às **tasks (work items) de um board do Azure
 DevOps** pela linha de comando: listar/consultar, criar, atualizar, mudar de
 estado, atribuir, mover de coluna no taskboard, vincular itens (hierarquia do
@@ -17,6 +20,8 @@ Via npm (instala o binário nativo da sua plataforma automaticamente):
 npm install -g @danielfalci/ado-cli
 ```
 
+Plataformas suportadas: macOS (arm64/x64), Linux (arm64/x64) e Windows x64.
+Também há binários prontos em cada [GitHub Release](https://github.com/dfalci/ado-cli/releases).
 Ou compile do código (veja **Build**).
 
 ## Build
@@ -133,18 +138,10 @@ batendo. O fluxo de lançamento:
 1. Atualize `version` no `Cargo.toml` (ex.: `0.2.0`).
 2. Rode `publish.bat` (lê a versão do `Cargo.toml`, cria e empurra a tag `vX.Y.Z`).
 
-A tag dispara o `release.yml`; ao concluir, o `publish-npm` publica no npm.
-Regenerar o CI após mudar `dist-workspace.toml`: `dist generate`.
-
-Estrutura de empacotamento npm (`npm/`):
-
-```
-npm/
-├── ado-cli/                 # pacote principal: launcher JS + optionalDependencies
-│   └── bin/ado-cli.js       # resolve e executa o binário nativo da plataforma
-└── platforms/               # um subpacote por plataforma (bin/ preenchido no CI)
-    ├── linux-x64/  darwin-x64/  darwin-arm64/  win32-x64/
-```
+A tag dispara o `release.yml`; ao concluir, o `publish-npm` publica no npm. O
+instalador npm (`ado-cli-npm-package.tar.gz`) é gerado pelo próprio cargo-dist —
+não há código de empacotamento npm versionado no repositório. Para regenerar o CI
+após mudar o `dist-workspace.toml`: `dist generate`.
 
 ## Licença
 
