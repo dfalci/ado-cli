@@ -219,20 +219,21 @@ Mover entre backlog e sprint é **planejamento**: só sob ordem, nunca por inici
 
 ## Pré-requisitos (configuração da CLI)
 
-A CLI é o binário `ado-cli`. Toda a configuração vem de um arquivo **`.env` no
-diretório atual** (com fallback para variáveis de ambiente do SO). **Não há flags
-de configuração na linha de comando** — só argumentos das operações.
+A CLI é o binário `ado-cli`. A configuração vem de um arquivo **`.env` na pasta da
+skill** (`.claude/skills/azure-devops-tasks/.env`, relativo ao diretório atual),
+com fallback para variáveis de ambiente do SO. **Não há flags de configuração na
+linha de comando** — só argumentos das operações.
 
+**Como configurar:** rode **`ado-cli skill`** — num terminal interativo ele
+pergunta as credenciais e já grava o `.env` na pasta correta. Se o `.env` estiver
+faltando ou incompleto, os comandos falham com uma mensagem indicando o que
+preencher; nesse caso, oriente o usuário a rodar `ado-cli skill` (ou editar
+`.claude/skills/azure-devops-tasks/.env` à mão).
+
+Chaves:
 - `AZDO_PAT` — Personal Access Token. Escopo **Work Items (read/write)** cobre a
   maior parte; **`search-users` requer também Identity (Read)** (ou Full access) —
   sem isso ela retorna 401 (use `list-team-members`, que precisa só de leitura de projeto).
 - `AZDO_PROJECT` — formato `organizacao/projeto` (ex.: `contoso/Loja`).
 - Opcionais: `AZDO_TEAM` (time das APIs de sprint/taskboard; default `{projeto} Team`),
   `AZDO_BASE_URL` (default `https://dev.azure.com`), `AZDO_API_VERSION` (default `7.1`).
-
-Exemplo de `.env`:
-
-```
-AZDO_PAT=<seu-pat>
-AZDO_PROJECT=contoso/Loja
-```

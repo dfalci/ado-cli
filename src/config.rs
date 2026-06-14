@@ -1,9 +1,10 @@
 //! Carregamento e validação da configuração da CLI.
 //!
-//! A configuração vem de um arquivo `.env` (formato `CHAVE=valor`) no diretório
-//! atual. Para cada chave ausente no arquivo, cai-se para a variável de ambiente
-//! do SO de mesmo nome. Não há flags de linha de comando para configuração — a
-//! linha de comando recebe apenas os argumentos das operações.
+//! A configuração vem de um arquivo `.env` (formato `CHAVE=valor`) dentro da
+//! pasta da skill (`.claude/skills/azure-devops-tasks/.env`), relativo ao
+//! diretório atual. Para cada chave ausente no arquivo, cai-se para a variável de
+//! ambiente do SO de mesmo nome. Não há flags de linha de comando para
+//! configuração — a linha de comando recebe apenas os argumentos das operações.
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -14,8 +15,6 @@ use anyhow::{bail, Context, Result};
 const DEFAULT_API_VERSION: &str = "7.1";
 /// URL base default (Azure DevOps Services na nuvem).
 const DEFAULT_BASE_URL: &str = "https://dev.azure.com";
-/// Nome do arquivo de environment lido do diretório atual.
-const ENV_FILE: &str = ".env";
 
 /// Configuração resolvida e validada da CLI.
 #[derive(Debug, Clone)]
@@ -35,10 +34,10 @@ pub struct Config {
 }
 
 impl Config {
-    /// Carrega a configuração lendo o `.env` do diretório atual e usando as
+    /// Carrega a configuração lendo o `.env` da pasta da skill e usando as
     /// variáveis de ambiente do SO como fallback por chave.
     pub fn load() -> Result<Self> {
-        let file_vars = load_env_file(Path::new(ENV_FILE))?;
+        let file_vars = load_env_file(&crate::skill::env_path())?;
         Self::from_lookup(|k| file_vars.get(k).cloned().or_else(|| std::env::var(k).ok()))
     }
 
@@ -50,11 +49,14 @@ impl Config {
     {
         let get = |key: &str| lookup(key).filter(|s| !s.trim().is_empty());
 
-        let pat = get("AZDO_PAT")
-            .context("PAT não informado: defina AZDO_PAT no arquivo .env (ou no ambiente)")?;
+        let pat = get("AZDO_PAT").context(
+            "PAT não informado: defina AZDO_PAT no .env da pasta da skill \
+             (.claude/skills/azure-devops-tasks/.env) ou no ambiente",
+        )?;
 
         let project_spec = get("AZDO_PROJECT").context(
-            "Projeto não informado: defina AZDO_PROJECT (org/projeto) no arquivo .env (ou no ambiente)",
+            "Projeto não informado: defina AZDO_PROJECT (org/projeto) no .env da pasta da skill \
+             (.claude/skills/azure-devops-tasks/.env) ou no ambiente",
         )?;
 
         let (organization, project) = split_project_spec(&project_spec)?;

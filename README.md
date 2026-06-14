@@ -33,10 +33,15 @@ cargo build --release
 
 ## Configuração
 
-A configuração vem de um arquivo **`.env` no diretório atual** (formato
-`CHAVE=valor`). Para cada chave ausente no arquivo, cai-se para a variável de
+A configuração vem de um arquivo **`.env` na pasta da skill**
+(`.claude/skills/azure-devops-tasks/.env`, relativo ao diretório atual), no formato
+`CHAVE=valor`. Para cada chave ausente no arquivo, cai-se para a variável de
 ambiente do SO de mesmo nome. **Não há flags de configuração na CLI** — a linha
 de comando recebe apenas os argumentos das operações.
+
+A forma recomendada de configurar é rodar **`ado-cli skill`**: num terminal
+interativo ele pergunta as credenciais e grava o `.env` já na pasta correta
+(ver **Skill do Claude Code**).
 
 | Variável            | Obrigatória | Default                  | Descrição                                       |
 | ------------------- | ----------- | ------------------------ | ----------------------------------------------- |
@@ -46,7 +51,7 @@ de comando recebe apenas os argumentos das operações.
 | `AZDO_BASE_URL`     | não         | `https://dev.azure.com`  | Útil para Azure DevOps Server on-prem.          |
 | `AZDO_API_VERSION`  | não         | `7.1`                    | Versão da API REST.                             |
 
-Exemplo de `.env`:
+Exemplo de `.claude/skills/azure-devops-tasks/.env`:
 
 ```
 AZDO_PAT=<seu-pat>
@@ -100,13 +105,21 @@ via flag (`--json`) ou pelo **stdin** quando a flag é omitida.
 
 ## Skill do Claude Code
 
-O binário pode instalar uma skill que ensina o agente a usar esta CLI:
+O binário instala uma skill que ensina o agente a usar esta CLI e, no mesmo
+passo, configura as credenciais:
 
 ```bash
 cd /seu/projeto
 ado-cli skill
-# cria ./.claude/skills/azure-devops-tasks/SKILL.md (sobrescreve se existir)
 ```
+
+O que `ado-cli skill` faz:
+
+- grava `./.claude/skills/azure-devops-tasks/SKILL.md` (sobrescreve se existir);
+- grava um `.env.example` de modelo na mesma pasta;
+- num **terminal interativo**, pergunta as credenciais (PAT, projeto e os opcionais)
+  e grava o **`.env` já na pasta correta** — pedindo confirmação antes de
+  sobrescrever um `.env` existente. Fora de um terminal, apenas indica onde criar o `.env`.
 
 ## Desenvolvimento
 
